@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "defaultMode": "smart-auto",
+  "promptEngineer": {
+    "enabled": true,
+    "agentKey": "copilot-agent",
+    "systemPrompt": "You are a senior prompt engineer and compiler. Transform the user's raw instruction into an ultra-concise, highly token-efficient, and structurally unambiguous system directive for a coding agent. Retain all technical intent, target paths, and requirements, but strip all conversational filler."
+  },
+  "agents": {
+    "copilot-agent": {
+      "name": "Prompt Copilot",
+      "costBadge": "FREE",
+      "description": "Token optimization & instruction compiler",
+      "cmdTemplate": "cmd -p \"[COMPRESS & OPTIMIZE]: {prompt}\" -m ox-alpha --yolo"
+    },
+    "router-agent": {
+      "name": "Router / Fast Triage",
+      "costBadge": "FREE",
+      "description": "Zero-cost intent parsing & fast execution",
+      "cmdTemplate": "cmd -p \"{prompt}\" -m ox-alpha --yolo"
+    },
+    "architect-agent": {
+      "name": "High-Reasoning Architect",
+      "costBadge": "$$$",
+      "description": "System specs, planning, schema design",
+      "cmdTemplate": "antigravity --model opus \"{prompt}\""
+    },
+    "builder-agent": {
+      "name": "Agentic Code Builder",
+      "costBadge": "$$",
+      "description": "High-speed multi-file implementation",
+      "cmdTemplate": "antigravity --model gemini-3.7-flash --task \"{prompt}\""
+    },
+    "workhorse-agent": {
+      "name": "Command Code Workhorse",
+      "costBadge": "$$",
+      "description": "Deep editing & autonomous changes",
+      "cmdTemplate": "cmd -p \"{prompt}\" -m deepseek-v4-flash --yolo"
+    },
+    "auditor-agent": {
+      "name": "Precision Reviewer",
+      "costBadge": "$$$",
+      "description": "Diff audit and syntax verification",
+      "cmdTemplate": "codex review \"{prompt}\""
+    }
+  },
+  "tiers": [
+    {
+      "id": "tier-low",
+      "name": "Tier 1: Snippet / Rapid Fix",
+      "color": "green",
+      "costBadge": "$",
+      "agentKey": "router-agent",
+      "maxWords": 15,
+      "keywords": ["docstring", "comment", "regex", "rename", "typo", "boilerplate", "json", "format"]
+    },
+    {
+      "id": "tier-mid",
+      "name": "Tier 2: Agentic Feature Build",
+      "color": "yellow",
+      "costBadge": "$$",
+      "agentKey": "builder-agent",
+      "maxWords": 50,
+      "keywords": ["implement", "test", "feature", "build", "scaffold", "fix bug", "refactor function"]
+    },
+    {
+      "id": "tier-high",
+      "name": "Tier 3: Complex Architecture",
+      "color": "magenta",
+      "costBadge": "$$$",
+      "agentKey": "architect-agent",
+      "maxWords": null,
+      "keywords": ["architect", "design", "refactor whole", "schema", "security", "distributed", "concurrency"]
+    }
+  ],
+  "swarms": {
+    "full-pipeline": {
+      "name": "Sequential: Plan → Build → Audit",
+      "type": "sequential",
+      "stages": [
+        {
+          "agentKey": "architect-agent",
+          "name": "Stage 1: Opus Blueprint",
+          "cmd": "antigravity --model opus \"Write detailed implementation specs for: {prompt}\" > .ai_plan.md"
+        },
+        {
+          "agentKey": "builder-agent",
+          "name": "Stage 2: Gemini / Flash Build",
+          "cmd": "antigravity --model gemini-3.7-flash --task \"Implement all specs from .ai_plan.md\""
+        },
+        {
+          "agentKey": "auditor-agent",
+          "name": "Stage 3: Codex Audit",
+          "cmd": "codex review --latest"
+        }
+      ]
+    },
+    "parallel-tri-agent": {
+      "name": "Parallel Swarm: 3 Subagents",
+      "type": "parallel",
+      "subagents": [
+        {
+          "id": "sub-1",
+          "agentKey": "workhorse-agent",
+          "name": "Subagent 1: Backend / API",
+          "taskTemplate": "Implement backend routes for: {prompt}"
+        },
+        {
+          "id": "sub-2",
+          "agentKey": "builder-agent",
+          "name": "Subagent 2: Test Suite",
+          "taskTemplate": "Write comprehensive unit & integration tests for: {prompt}"
+        },
+        {
+          "id": "sub-3",
+          "agentKey": "router-agent",
+          "name": "Subagent 3: Documentation & Types",
+          "taskTemplate": "Generate TypeScript definitions and README specs for: {prompt}"
+        }
+      ]
+    }
+  }
+}

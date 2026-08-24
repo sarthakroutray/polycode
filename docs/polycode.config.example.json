@@ -1,0 +1,106 @@
+{
+  "$schema": "./polycode.config.schema.json",
+  "defaultMode": "smart-auto",
+  "promptEngineer": {
+    "enabled": true,
+    "agentKey": "copilot",
+    "systemPrompt": "You are a prompt engineer. Compress and restructure the user's instruction into a concise, unambiguous, single-paragraph directive for a coding agent. Remove fluff. Keep all hard requirements, constraints, and deliverables. Output ONLY the optimized prompt, no preamble.",
+    "timeoutMs": 30000
+  },
+  "agents": {
+    "copilot": {
+      "name": "copilot",
+      "costBadge": "OPT",
+      "description": "Prompt optimizer / prompt-engineering copilot.",
+      "cmdTemplate": "codex -p \"{prompt}\""
+    },
+    "architect": {
+      "name": "architect",
+      "costBadge": "PLAN",
+      "description": "High-level planner: reads a prompt, outputs a plan.",
+      "cmdTemplate": "codex -p \"{prompt}\""
+    },
+    "builder": {
+      "name": "builder",
+      "costBadge": "BUILD",
+      "description": "Build agent: turns the plan/prompt into changes.",
+      "cmdTemplate": "codex -p \"{prompt}\""
+    },
+    "workhorse": {
+      "name": "workhorse",
+      "costBadge": "WORK",
+      "description": "Heavy-lifting execute agent for straightforward requests.",
+      "cmdTemplate": "codex -p \"{prompt}\""
+    },
+    "auditor": {
+      "name": "auditor",
+      "costBadge": "AUDIT",
+      "description": "Review/audit agent: checks a build for correctness.",
+      "cmdTemplate": "codex -p \"{prompt}\""
+    }
+  },
+  "tiers": [
+    {
+      "id": "quick",
+      "name": "Quick",
+      "color": "green",
+      "costBadge": "L",
+      "agentKey": "workhorse",
+      "maxWords": 15,
+      "keywords": ["fix", "typo", "hello", "hi", "test", "run"]
+    },
+    {
+      "id": "standard",
+      "name": "Standard",
+      "color": "yellow",
+      "costBadge": "M",
+      "agentKey": "builder",
+      "maxWords": null,
+      "keywords": ["feature", "add", "refactor", "build", "api", "endpoint"]
+    },
+    {
+      "id": "complex",
+      "name": "Complex",
+      "color": "red",
+      "costBadge": "H",
+      "agentKey": "architect",
+      "maxWords": null,
+      "keywords": ["architect", "design", "system", "migrate", "secure", "plan"]
+    }
+  ],
+  "swarms": {
+    "full-pipeline": {
+      "type": "sequential",
+      "name": "Full Pipeline",
+      "stages": [
+        { "agentKey": "architect", "name": "Plan", "cmd": "codex -p \"{prompt}\"" },
+        { "agentKey": "builder", "name": "Build", "cmd": "codex -p \"{prompt}\"" },
+        { "agentKey": "auditor", "name": "Audit", "cmd": "codex -p \"{prompt}\"" }
+      ]
+    },
+    "parallel-tri-agent": {
+      "type": "parallel",
+      "name": "Parallel Tri-Agent",
+      "subagents": [
+        {
+          "id": "p1",
+          "agentKey": "architect",
+          "name": "Design",
+          "taskTemplate": "Design a solution for: {prompt}"
+        },
+        {
+          "id": "p2",
+          "agentKey": "builder",
+          "name": "Implement",
+          "taskTemplate": "Implement the fastest correct solution for: {prompt}"
+        },
+        {
+          "id": "p3",
+          "agentKey": "auditor",
+          "name": "Audit",
+          "taskTemplate": "Audit and harden this plan for: {prompt}"
+        }
+      ]
+    }
+  }
+}

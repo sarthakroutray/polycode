@@ -1,0 +1,35 @@
+{
+  "name": "polycode",
+  "version": "0.1.0",
+  "description": "Multi-agent parallel orchestrator & prompt-engineering copilot over terminal coding CLIs",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "bin": {
+    "polycode": "bin/polycode.js"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.tsx",
+    "start": "npm run build && node bin/polycode.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ink": "^5.2.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^18",
+    "tsx": "^4",
+    "typescript": "^5.6"
+  }
+}
