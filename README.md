@@ -67,10 +67,30 @@ terminal → mode bar → prompt input.
 |---|---|
 | `Enter` | Optimize (if enabled) and dispatch the typed prompt |
 | `Tab` / `Shift+Tab` | Cycle the selected log tab |
+| `Ctrl+E` | Toggle the config editor (edit agents, tiers, swarms, copilot) |
 | `Ctrl+M` | Toggle the mode picker (digits or arrows to select) |
 | `Ctrl+K` | Kill all running agents (stay in app) |
 | `Ctrl+L` | Clear all logs |
 | `Ctrl+C` | Kill all agents and quit |
+
+### Config editor (`Ctrl+E`)
+
+Every field in `polycode.config.json` is editable live from the TUI. The editor
+is organized into sections:
+
+- **General** — `defaultMode`, copilot enabled/agent/timeout/systemPrompt
+- **Agents** — each agent's `name`, `costBadge`, `description`, `cmdTemplate`
+  (which embeds the model, e.g. `codex -m deepseek-v4-flash -p "{prompt}"`)
+- **Tiers** — routing tiers with `id`, `name`, `color`, `agentKey`, `maxWords`,
+  `keywords`
+- **Swarms** — swarm `name`, sequential stages (`agentKey`, `cmd`), parallel
+  subagents (`agentKey`, `taskTemplate`)
+
+Navigate with `↑`/`↓` (or `j`/`k`), press `Enter` to edit a field inline or
+toggle a boolean, `Tab` to page down. `a` adds new entries, `d` deletes the
+selected entry (blocked if the agent is still referenced by tiers/swarms).
+`Ctrl+S` writes the config to disk and applies it immediately. `Esc` closes the
+editor (unsaved changes are discarded).
 
 ## configuration
 

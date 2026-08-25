@@ -1,15 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import type { PolycodeConfig, CopilotResult, RouteResult } from '../types.js';
 import { AgentManager } from '../agent-manager.js';
 import { optimizePrompt, substitutePlaceholders } from '../prompt-copilot.js';
 import { route } from '../router.js';
+import { saveConfig } from '../config.js';
 import { StatusHeader } from './StatusHeader.js';
 import { CopilotView } from './CopilotView.js';
 import { SubagentGrid } from './SubagentGrid.js';
 import { AgentTerminal } from './AgentTerminal.js';
 import { ModeSelector, buildModeOptions, type ModeOption } from './ModeSelector.js';
+import { ConfigEditor, handleEditorKeys } from './ConfigEditor.js';
 
 interface Props {
   config: PolycodeConfig;
@@ -18,15 +20,19 @@ interface Props {
   noCopilot?: boolean;
 }
 
-export function App({ config, configPath, manager, noCopilot = false }: Props) {
+export function App({ config: initialConfig, configPath, manager, noCopilot = false }: Props) {
   const { exit } = useApp();
+  const [config, setConfig] = useState<PolycodeConfig>(initialConfig);
   const [inputValue, setInputValue] = useState('');
-  const [mode, setMode] = useState<string>(config.defaultMode);
+  const [mode, setMode] = useState<string>(initialConfig.defaultMode);
   const [copilotResult, setCopilotResult] = useState<CopilotResult | null>(null);
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [selectedTabIdx, setSelectedTabIdx] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalHighlight, setModalHighlight] = useState(0);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const editorCursor = useRef(0);
+  const editorEditing = useRef(false);
   const [, setTick] = useState(0);
 
   // Re-render on every manager mutation.
@@ -197,6 +203,31 @@ export function App({ config, configPath, manager, noCopilot = false }: Props) {
   // Keyboard shortcuts.
   useInput(
     (input, key) => {
+      if (editorOpen) {
+        handleEditorKeys(input, key, {
+          editing: editorEditing.current,
+          cursor: editorCursor.current,
+          rowCount: 0,
+          moveCursor(delta) {
+            editorCursor.current += delta;
+            setTick((n) => n + 1);
+          },
+          beginEdit() {
+            editorEditing.current = true;
+            setTick((n) => n + 1);
+          },
+          save() {
+            editorEditing.current = false;
+            setTick((n) => n + 1);
+          },
+          close() {
+            editorEditing.current = false;
+            setEditorOpen(false);
+          },
+        });
+        return;
+      }
+
       if (modalOpen) {
         if (key.escape) {
           setModalOpen(false);
@@ -253,6 +284,10 @@ export function App({ config, configPath, manager, noCopilot = false }: Props) {
         setModalOpen((o) => !o);
         return;
       }
+      if (key.ctrl && input === 'e') {
+        setEditorOpen((o) => !o);
+        return;
+      }
       if (key.tab) {
         const n = liveInstances.length;
         if (n > 0) {
@@ -261,7 +296,7 @@ export function App({ config, configPath, manager, noCopilot = false }: Props) {
         return;
       }
     },
-    { isActive: !modalOpen },
+    { isActive: !modalOpen && !editorOpen },
   );
 
   return (
@@ -273,7 +308,22 @@ export function App({ config, configPath, manager, noCopilot = false }: Props) {
         route={routeResult}
       />
       {copilotResult ? <CopilotView result={copilotResult} columns={process.stdout.columns} /> : null}
-      {modalOpen ? (
+      {editorOpen ? (
+        <ConfigEditor
+          config={config}
+          onClose={() => setEditorOpen(false)}
+          onSave={(next) => {
+            setConfig(next);
+            if (configPath) {
+              try {
+                saveConfig(configPath, next);
+              } catch {
+                // saveConfig throws on I/O; ConfigEditor shows its own note
+              }
+            }
+          }}
+        />
+      ) : modalOpen ? (
         <ModeSelector
           options={modeOptions}
           activeIndex={activeModeIndex}
@@ -294,12 +344,12 @@ export function App({ config, configPath, manager, noCopilot = false }: Props) {
           <AgentTerminal instance={selectedInstance} />
         </>
       )}
-      <Text dimColor>Enter spawn • Tab switch • ^M mode • ^K kill • ^L clear • ^C quit</Text>
+      <Text dimColor>Enter spawn • Tab switch • ^E config • ^M mode • ^K kill • ^L clear • ^C quit</Text>
       <Box>
         <Text>&gt; </Text>
         <TextInput
           value={inputValue}
-          focus={!modalOpen}
+          focus={!modalOpen && !editorOpen}
           onChange={(v) => setInputValue(v.replace(/\t/g, ''))}
           onSubmit={onSubmit}
         />

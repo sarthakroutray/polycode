@@ -85,6 +85,14 @@ export function loadpolycodeConfig(explicit?: string): LoadResult {
   return { config: parsed.data, path: found };
 }
 
+/** Serialize + write a config object to disk (2-space JSON, trailing newline). */
+export function saveConfig(targetPath: string, config: PolycodeConfig): string {
+  const body = JSON.stringify(config, null, 2) + '\n';
+  mkdirSync(path.dirname(path.resolve(targetPath)), { recursive: true });
+  writeFileSync(path.resolve(targetPath), body, 'utf8');
+  return path.resolve(targetPath);
+}
+
 /** Write a default config file. Refuses to overwrite unless force is set. */
 export function initConfig(targetPath?: string, force = false): string {
   const target = path.resolve(targetPath ?? 'polycode.config.json');
@@ -93,11 +101,7 @@ export function initConfig(targetPath?: string, force = false): string {
       `Refusing to overwrite existing config at ${target}. Use --force to replace it.`,
     );
   }
-  const json = generateDefaultConfig();
-  const body = JSON.stringify(json, null, 2) + '\n';
-  mkdirSync(path.dirname(target), { recursive: true });
-  writeFileSync(target, body, 'utf8');
-  return target;
+  return saveConfig(target, generateDefaultConfig());
 }
 
 /** Read package.json version for --version. */
