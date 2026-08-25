@@ -11,20 +11,33 @@ interface Props {
 }
 
 export function StatusHeader({ configPath, instances, copilot, route }: Props) {
-  const active = instances.filter((i) => ['SPAWNED', 'STREAMING', 'REFINING'].includes(i.status)).length;
+  const active = instances.filter((i) =>
+    ['SPAWNED', 'STREAMING', 'REFINING'].includes(i.status),
+  ).length;
 
   return (
-    <Box justifyContent="space-between">
-      <Text dimColor>polycode · {configPath ? configPath : 'no config'}</Text>
-      <Text>
-        {active}/{instances.length} active
-        {copilot && !copilot.fallback ? (
-          <Text>
-            {'  '}Saved {copilot.savedPercent}% • {copilot.rawTokens}→{copilot.optimizedTokens} tok
-          </Text>
-        ) : null}
-        {route ? <Text>{'  '}[{route.agentName}]</Text> : null}
+    <Box>
+      <Text bold>polycode</Text>
+      <Text dimColor>
+        {' '}
+        · {configPath ?? 'no config'} · {active}/{instances.length} active
       </Text>
+      {copilot && !copilot.fallback ? (
+        <Text>
+          {' '}
+          · <Text color="green">Saved {copilot.savedPercent}%</Text>
+          <Text dimColor>
+            {' '}
+            {copilot.rawTokens}→{copilot.optimizedTokens} tok
+          </Text>
+        </Text>
+      ) : null}
+      {route ? (
+        <Text>
+          {' '}
+          · <Text color="cyan">[{route.agentName}]</Text>
+        </Text>
+      ) : null}
     </Box>
   );
 }

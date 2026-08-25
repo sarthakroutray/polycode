@@ -3,6 +3,16 @@ import { Box, Text } from 'ink';
 import type { AgentInstance } from '../types.js';
 import { STATUS_COLOR, elapsed } from './shared.js';
 
+const STATUS_LABEL: Record<string, string> = {
+  IDLE: 'idle',
+  REFINING: 'refining',
+  SPAWNED: 'spawned',
+  STREAMING: 'streaming',
+  COMPLETED: 'done',
+  FAILED: 'failed',
+  KILLED: 'killed',
+};
+
 interface Props {
   instances: AgentInstance[];
   selectedId: string | null;
@@ -22,41 +32,30 @@ export function SubagentGrid({ instances, selectedId, onSelect }: Props) {
     return () => clearInterval(id);
   }, [hasActive]);
 
-  if (instances.length === 0) return <Box />;
-  const half = Math.ceil(instances.length / 2);
-  const left = instances.slice(0, half);
-  const right = instances.slice(half);
-
-  const Tile = ({ inst }: { inst: AgentInstance }) => {
-    const selected = inst.id === selectedId;
-    return (
-      <Box borderStyle={selected ? 'round' : 'round'} borderColor={selected ? 'cyan' : 'gray'}>
-        <Box flexDirection="column" paddingX={1} flexGrow={1}>
-          <Box justifyContent="space-between">
-            <Text bold>{inst.name}</Text>
-            <Text dimColor>{inst.costBadge ? `[${inst.costBadge}] ` : ''}{elapsed(inst.startedAt, now)}</Text>
-          </Box>
-          <Text color={STATUS_COLOR[inst.status]}>{inst.status}</Text>
-        </Box>
-      </Box>
-    );
-  };
+  if (instances.length === 0) return null;
 
   return (
-    <Box flexDirection="column" marginTop={1}>
-      <Box flexDirection="row">
-        <Box flexDirection="column" flexGrow={1}>
-          {left.map((i) => (
-            <Tile key={i.id} inst={i} />
-          ))}
-        </Box>
-        <Box width={1} />
-        <Box flexDirection="column" flexGrow={1}>
-          {right.map((i) => (
-            <Tile key={i.id} inst={i} />
-          ))}
-        </Box>
-      </Box>
+    <Box flexDirection="column">
+      {instances.map((inst) => {
+        const sel = inst.id === selectedId;
+        return (
+          <Box key={inst.id} paddingLeft={2}>
+            <Text color={sel ? 'cyan' : 'gray'}>{sel ? '› ' : '  '}</Text>
+            <Box width={16}>
+              <Text bold={sel}>{inst.name}</Text>
+            </Box>
+            <Box width={8}>
+              <Text dimColor>{inst.costBadge || '·'}</Text>
+            </Box>
+            <Box width={12}>
+              <Text color={STATUS_COLOR[inst.status]}>
+                {STATUS_LABEL[inst.status] ?? inst.status}
+              </Text>
+            </Box>
+            <Text dimColor>{elapsed(inst.startedAt, now)}</Text>
+          </Box>
+        );
+      })}
     </Box>
   );
 }

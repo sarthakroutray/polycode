@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import type { PolycodeConfig, CopilotResult, RouteResult } from '../types.js';
@@ -11,7 +11,7 @@ import { CopilotView } from './CopilotView.js';
 import { SubagentGrid } from './SubagentGrid.js';
 import { AgentTerminal } from './AgentTerminal.js';
 import { ModeSelector, buildModeOptions, type ModeOption } from './ModeSelector.js';
-import { ConfigEditor, handleEditorKeys } from './ConfigEditor.js';
+import { ConfigEditor } from './ConfigEditor.js';
 
 interface Props {
   config: PolycodeConfig;
@@ -31,8 +31,6 @@ export function App({ config: initialConfig, configPath, manager, noCopilot = fa
   const [modalOpen, setModalOpen] = useState(false);
   const [modalHighlight, setModalHighlight] = useState(0);
   const [editorOpen, setEditorOpen] = useState(false);
-  const editorCursor = useRef(0);
-  const editorEditing = useRef(false);
   const [, setTick] = useState(0);
 
   // Re-render on every manager mutation.
@@ -203,31 +201,6 @@ export function App({ config: initialConfig, configPath, manager, noCopilot = fa
   // Keyboard shortcuts.
   useInput(
     (input, key) => {
-      if (editorOpen) {
-        handleEditorKeys(input, key, {
-          editing: editorEditing.current,
-          cursor: editorCursor.current,
-          rowCount: 0,
-          moveCursor(delta) {
-            editorCursor.current += delta;
-            setTick((n) => n + 1);
-          },
-          beginEdit() {
-            editorEditing.current = true;
-            setTick((n) => n + 1);
-          },
-          save() {
-            editorEditing.current = false;
-            setTick((n) => n + 1);
-          },
-          close() {
-            editorEditing.current = false;
-            setEditorOpen(false);
-          },
-        });
-        return;
-      }
-
       if (modalOpen) {
         if (key.escape) {
           setModalOpen(false);

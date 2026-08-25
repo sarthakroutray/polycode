@@ -34,23 +34,15 @@ export function ModeSelector({
   onCancel,
 }: Props) {
   return (
-    <Box
-      borderStyle="round"
-      borderColor="cyan"
-      flexDirection="column"
-      paddingX={1}
-      paddingY={1}
-    >
-      <Text bold underline>Select dispatch mode</Text>
-      <Box flexDirection="column">
-        {options.map((o, i) => (
-          <Box key={o.value} flexDirection="row">
-            <Text color={i === highlight ? 'cyan' : 'gray'}>{i === highlight ? '› ' : '  '}</Text>
-            <Text color={i === activeIndex ? 'green' : undefined}>{o.label}</Text>
-          </Box>
-        ))}
-      </Box>
-      <Text dimColor>↑↓ / digits to move · Enter confirm · Esc cancel</Text>
+    <Box flexDirection="column" paddingLeft={2}>
+      <Text bold>select mode</Text>
+      {options.map((o, i) => (
+        <Box key={o.value} paddingLeft={2}>
+          <Text color={i === highlight ? 'cyan' : 'gray'}>{i === highlight ? '› ' : '  '}</Text>
+          <Text color={i === activeIndex ? 'green' : undefined}>{o.label}</Text>
+        </Box>
+      ))}
+      <Text dimColor>  ↑↓ / digits · enter confirm · esc cancel</Text>
     </Box>
   );
 }
