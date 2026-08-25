@@ -33,6 +33,7 @@ export const agentDefSchema = z.object({
   costBadge: z.string().default(''),
   description: z.string().default(''),
   cmdTemplate: z.string().min(1),
+  tags: z.array(z.string()).default([]),
 });
 
 export const tierSchema = z.object({
@@ -153,6 +154,13 @@ export interface RouteResult {
   agentName: string;
   confidence: 'high' | 'low';
   reasons: string[];
+}
+
+/** Multi-agent dispatch plan from smartDispatch(). */
+export interface DispatchPlan {
+  agents: Array<{ agentKey: string; reason: string }>;
+  parallel: boolean;
+  overallReason: string;
 }
 
 /** Error type for genuine configuration bugs the user must fix. */

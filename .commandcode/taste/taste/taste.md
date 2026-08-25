@@ -6,4 +6,7 @@
 - Does not want a co-author trailer on commits (explicitly overrides the default co-author convention; "push but put no coauthor"). Confidence: 0.9
 - Develops on Windows; project roots live under drive-letter paths (e.g., `D:\Projects\polycode`) — keep commands and paths Windows-compatible. Confidence: 0.7
 - Prefers runtime/behavioral settings (agent models, config knobs) to be editable from the app's own UI rather than only hand-editing the config file ("make everything configurable by the ui"). Confidence: 0.5
-- Issues terse, one-line imperative commands ("push", "continue") and expects the agent to plan, fill in details, and execute end-to-end autonomously without asking clarifying questions. Confidence: 0.6
+- Issues terse, one-line imperative commands ("push", "continue") and expects the agent to plan, fill in details, and execute end-to-end autonomously without asking clarifying questions. Confidence: 0.8
+- Thinks in role-based multi-agent architecture with distinct roles (prompt engineer, architect, builder, workhorses, auditor) and assigns specific CLI tools and models to each role — uses multiple agent backends (cmdc, agy.exe, codex) as interchangeable execution targets. Confidence: 0.8
+- Wants intelligent multi-agent dispatch: the orchestrator should know its full agent inventory (tags, capabilities) and autonomously decide whether to spawn a single best-fit agent or multiple agents in parallel based on task analysis — not just keyword-tier routing but capability-aware scoring across all agents. Confidence: 0.8
+- Prefers tiered model strategy: premium/expensive models for planning and auditing, fast/cheap models for bulk execution workhorses. Confidence: 0.7

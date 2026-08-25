@@ -4,7 +4,7 @@ import TextInput from 'ink-text-input';
 import type { PolycodeConfig, CopilotResult, RouteResult } from '../types.js';
 import { AgentManager } from '../agent-manager.js';
 import { optimizePrompt, substitutePlaceholders } from '../prompt-copilot.js';
-import { route } from '../router.js';
+import { route, smartDispatch } from '../router.js';
 import { saveConfig } from '../config.js';
 import { StatusHeader } from './StatusHeader.js';
 import { CopilotView } from './CopilotView.js';
@@ -51,9 +51,9 @@ export function App({ config: initialConfig, configPath, manager, noCopilot = fa
   /** Dispatch an already-optimized prompt through the given mode. */
   function dispatch(prompt: string, dispatchMode: string) {
     if (dispatchMode === 'smart-auto') {
-      let r: RouteResult;
+      let plan;
       try {
-        r = route(prompt, config);
+        plan = smartDispatch(prompt, config);
       } catch (err) {
         const id = manager.register({
           id: 'route-error',
@@ -71,17 +71,38 @@ export function App({ config: initialConfig, configPath, manager, noCopilot = fa
         manager.emit('change');
         return;
       }
-      setRouteResult(r);
-      const agent = config.agents[r.agentKey];
-      if (!agent) return;
-      const id = manager.register({
-        id: r.agentKey,
-        agentKey: r.agentKey,
-        name: agent.name,
-        costBadge: agent.costBadge,
-        command: substitutePlaceholders(agent.cmdTemplate, { prompt }),
-      });
-      void manager.run(id);
+
+      if (plan.parallel) {
+        // Spawn multiple agents in parallel
+        const jobs = plan.agents.map((a) => {
+          const agent = config.agents[a.agentKey];
+          if (!agent) return null;
+          return {
+            id: `smart-${a.agentKey}`,
+            agentKey: a.agentKey,
+            name: agent.name,
+            costBadge: agent.costBadge,
+            command: substitutePlaceholders(agent.cmdTemplate, { prompt }),
+          };
+        }).filter(Boolean) as Array<{ id: string; agentKey: string; name: string; costBadge: string; command: string }>;
+
+        if (jobs.length > 0) {
+          void manager.runParallel(jobs);
+        }
+      } else {
+        // Single agent dispatch
+        const agentKey = plan.agents[0]?.agentKey;
+        const agent = agentKey ? config.agents[agentKey] : null;
+        if (!agent) return;
+        const id = manager.register({
+          id: agentKey,
+          agentKey,
+          name: agent.name,
+          costBadge: agent.costBadge,
+          command: substitutePlaceholders(agent.cmdTemplate, { prompt }),
+        });
+        void manager.run(id);
+      }
       return;
     }
 
@@ -273,59 +294,75 @@ export function App({ config: initialConfig, configPath, manager, noCopilot = fa
   );
 
   return (
-    <Box flexDirection="column" paddingX={1} paddingY={1} minHeight={process.stdout.rows}>
+    <Box flexDirection="column" paddingX={1} minHeight={process.stdout.rows}>
+      {/* Status bar */}
       <StatusHeader
         configPath={configPath}
         instances={liveInstances}
         copilot={copilotResult}
         route={routeResult}
       />
-      {copilotResult ? <CopilotView result={copilotResult} columns={process.stdout.columns} /> : null}
-      {editorOpen ? (
-        <ConfigEditor
-          config={config}
-          onClose={() => setEditorOpen(false)}
-          onSave={(next) => {
-            setConfig(next);
-            if (configPath) {
-              try {
-                saveConfig(configPath, next);
-              } catch {
-                // saveConfig throws on I/O; ConfigEditor shows its own note
+
+      {/* Main output area — takes all available space */}
+      <Box flexDirection="column" flexGrow={1}>
+        {editorOpen ? (
+          <ConfigEditor
+            config={config}
+            onClose={() => setEditorOpen(false)}
+            onSave={(next) => {
+              setConfig(next);
+              if (configPath) {
+                try {
+                  saveConfig(configPath, next);
+                } catch {
+                  // saveConfig throws on I/O; ConfigEditor shows its own note
+                }
               }
-            }
-          }}
-        />
-      ) : modalOpen ? (
-        <ModeSelector
-          options={modeOptions}
-          activeIndex={activeModeIndex}
-          highlight={modalHighlight}
-          onConfirm={onConfirmMode}
-          onCancel={() => setModalOpen(false)}
-        />
-      ) : (
-        <>
-          <SubagentGrid
-            instances={liveInstances}
-            selectedId={selectedInstance?.id ?? null}
-            onSelect={(id) => {
-              const idx = liveInstances.findIndex((i) => i.id === id);
-              if (idx >= 0) setSelectedTabIdx(idx);
             }}
           />
-          <AgentTerminal instance={selectedInstance} />
-        </>
-      )}
-      <Text dimColor>Enter spawn • Tab switch • ^E config • ^M mode • ^K kill • ^L clear • ^C quit</Text>
-      <Box>
-        <Text>&gt; </Text>
-        <TextInput
-          value={inputValue}
-          focus={!modalOpen && !editorOpen}
-          onChange={(v) => setInputValue(v.replace(/\t/g, ''))}
-          onSubmit={onSubmit}
-        />
+        ) : modalOpen ? (
+          <ModeSelector
+            options={modeOptions}
+            activeIndex={activeModeIndex}
+            highlight={modalHighlight}
+            onConfirm={onConfirmMode}
+            onCancel={() => setModalOpen(false)}
+          />
+        ) : (
+          <>
+            {copilotResult ? <CopilotView result={copilotResult} columns={process.stdout.columns} /> : null}
+            <AgentTerminal instance={selectedInstance} />
+          </>
+        )}
+      </Box>
+
+      {/* Separator */}
+      <Text dimColor>{'─'.repeat(Math.min(80, process.stdout.columns - 2))}</Text>
+
+      {/* Task monitor — compact agent status */}
+      <SubagentGrid
+        instances={liveInstances}
+        selectedId={selectedInstance?.id ?? null}
+        onSelect={(id) => {
+          const idx = liveInstances.findIndex((i) => i.id === id);
+          if (idx >= 0) setSelectedTabIdx(idx);
+        }}
+      />
+
+      {/* Input area */}
+      <Box flexDirection="column">
+        <Text dimColor>
+          {mode} · Enter spawn · Tab switch · ^E config · ^M mode · ^K kill · ^L clear · ^C quit
+        </Text>
+        <Box>
+          <Text bold color="cyan">&gt; </Text>
+          <TextInput
+            value={inputValue}
+            focus={!modalOpen && !editorOpen}
+            onChange={(v) => setInputValue(v.replace(/\t/g, ''))}
+            onSubmit={onSubmit}
+          />
+        </Box>
       </Box>
     </Box>
   );

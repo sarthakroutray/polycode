@@ -104,9 +104,10 @@ Key shape:
   `timeoutMs`. When enabled, every submission goes through the copilot first
   (one optimization feeds all stages/subagents).
 - **`agents`** — map of `<agentKey>` → `{ name, costBadge, description,
-  cmdTemplate }`. `cmdTemplate` contains `{prompt}` (and optionally `{system}`)
+  cmdTemplate, tags }`. `cmdTemplate` contains `{prompt}` (and optionally `{system}`)
   placeholders which are substituted. Multi-line prompts are flattened and
-  escaped so they survive a single-line `shell: true` command.
+  escaped so they survive a single-line `shell: true` command. `tags` is an
+  array of capability keywords used by smart dispatch.
 - **`tiers`** — ordered low→high for routing. Each has `keywords`, optional
   `maxWords`, a `color`, and `agentKey`. Higher scores win; ties go to the
   later (stronger) tier; no keyword match falls back to the middle tier.
@@ -117,14 +118,32 @@ Key shape:
 
 ```json
 {
-  "agentKey": {
-    "name": "workhorse",
+  "workhorse-flash": {
+    "name": "workhorse-flash",
     "costBadge": "WORK",
-    "description": "Executes straightforward requests",
-    "cmdTemplate": "codex -p \"{prompt}\""
+    "description": "Fast execution — agy.exe 3.7 Flash.",
+    "cmdTemplate": "agy.exe -p \"{prompt}\" -m 3.7-flash",
+    "tags": ["fast", "quick", "simple", "fix", "typo"]
   }
 }
 ```
+
+### Smart dispatch (`smart-auto` mode)
+
+When using `smart-auto` mode, the orchestrator scores **every agent** against
+the prompt using their `tags` and `description` keywords. It then decides:
+
+- **Single agent** — if one agent clearly dominates (score > 2x second place)
+- **Parallel agents** — if multiple agents score similarly (within 60% of top),
+  up to 4 agents are spawned concurrently
+
+This lets you define multiple workhorse agents with different strengths (fast
+vs deep-reasoning vs heavy-refactoring) and the orchestrator automatically picks
+the best one — or combines them when the task spans multiple domains.
+
+Example: "refactor the complex algorithm and debug the reasoning logic" would
+spawn both the `workhorse-ox` (tags: refactor, complex) and `workhorse-deepseek`
+(tags: reasoning, debug, algorithm) in parallel.
 
 ## Behavior notes
 

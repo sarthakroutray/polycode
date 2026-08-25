@@ -11,32 +11,51 @@
     "copilot": {
       "name": "copilot",
       "costBadge": "OPT",
-      "description": "Prompt optimizer / prompt-engineering copilot.",
-      "cmdTemplate": "codex -p \"{prompt}\""
+      "description": "Prompt optimizer — Command Code Qwen 3.8 27B.",
+      "cmdTemplate": "cmdc -p \"{prompt}\" -m qwen-3.8-27b",
+      "tags": ["optimize", "compress", "prompt-engineering"]
     },
     "architect": {
       "name": "architect",
       "costBadge": "PLAN",
-      "description": "High-level planner: reads a prompt, outputs a plan.",
-      "cmdTemplate": "codex -p \"{prompt}\""
+      "description": "High-level planner — agy.exe Claude Opus 4.6.",
+      "cmdTemplate": "agy.exe -p \"{prompt}\" -m claude-opus-4.6",
+      "tags": ["design", "architecture", "system", "plan", "complex", "reasoning", "migrate", "secure"]
     },
     "builder": {
       "name": "builder",
       "costBadge": "BUILD",
-      "description": "Build agent: turns the plan/prompt into changes.",
-      "cmdTemplate": "codex -p \"{prompt}\""
+      "description": "Build agent — Command Code Mimov2.5 Pro.",
+      "cmdTemplate": "cmdc -p \"{prompt}\" -m mimov2.5-pro",
+      "tags": ["build", "implement", "feature", "code", "scaffold", "api", "endpoint"]
     },
-    "workhorse": {
-      "name": "workhorse",
+    "workhorse-flash": {
+      "name": "workhorse-flash",
       "costBadge": "WORK",
-      "description": "Heavy-lifting execute agent for straightforward requests.",
-      "cmdTemplate": "codex -p \"{prompt}\""
+      "description": "Fast execution — agy.exe 3.7 Flash.",
+      "cmdTemplate": "agy.exe -p \"{prompt}\" -m 3.7-flash",
+      "tags": ["fast", "quick", "simple", "fix", "typo", "rapid", "hello", "test", "run"]
+    },
+    "workhorse-ox": {
+      "name": "workhorse-ox",
+      "costBadge": "WORK",
+      "description": "Heavy-lifting — Command Code ox-alpha.",
+      "cmdTemplate": "cmdc -p \"{prompt}\" -m ox-alpha",
+      "tags": ["heavy", "large", "refactor", "multi-file", "deep-edit", "complex", "rewrite"]
+    },
+    "workhorse-deepseek": {
+      "name": "workhorse-deepseek",
+      "costBadge": "WORK",
+      "description": "Deep reasoning — DeepSeek V4 Flash latest.",
+      "cmdTemplate": "cmdc -p \"{prompt}\" -m deepseek-v4-flash",
+      "tags": ["reasoning", "logic", "algorithm", "math", "analysis", "debug", "optimize"]
     },
     "auditor": {
       "name": "auditor",
       "costBadge": "AUDIT",
-      "description": "Review/audit agent: checks a build for correctness.",
-      "cmdTemplate": "codex -p \"{prompt}\""
+      "description": "Review/audit — codex GPT 5.6 Terra Medium.",
+      "cmdTemplate": "codex -p \"{prompt}\" -m gpt-5.6-terra-medium",
+      "tags": ["review", "audit", "test", "verify", "security", "lint", "check"]
     }
   },
   "tiers": [
@@ -45,7 +64,7 @@
       "name": "Quick",
       "color": "green",
       "costBadge": "L",
-      "agentKey": "workhorse",
+      "agentKey": "workhorse-flash",
       "maxWords": 15,
       "keywords": ["fix", "typo", "hello", "hi", "test", "run"]
     },
@@ -73,9 +92,9 @@
       "type": "sequential",
       "name": "Full Pipeline",
       "stages": [
-        { "agentKey": "architect", "name": "Plan", "cmd": "codex -p \"{prompt}\"" },
-        { "agentKey": "builder", "name": "Build", "cmd": "codex -p \"{prompt}\"" },
-        { "agentKey": "auditor", "name": "Audit", "cmd": "codex -p \"{prompt}\"" }
+        { "agentKey": "architect", "name": "Plan", "cmd": "agy.exe -p \"{prompt}\" -m claude-opus-4.6" },
+        { "agentKey": "builder", "name": "Build", "cmd": "cmdc -p \"{prompt}\" -m mimov2.5-pro" },
+        { "agentKey": "auditor", "name": "Audit", "cmd": "codex -p \"{prompt}\" -m gpt-5.6-terra-medium" }
       ]
     },
     "parallel-tri-agent": {
@@ -99,6 +118,30 @@
           "agentKey": "auditor",
           "name": "Audit",
           "taskTemplate": "Audit and harden this plan for: {prompt}"
+        }
+      ]
+    },
+    "workhorse-swarm": {
+      "type": "parallel",
+      "name": "Workhorse Swarm",
+      "subagents": [
+        {
+          "id": "w1",
+          "agentKey": "workhorse-flash",
+          "name": "Flash",
+          "taskTemplate": "Execute quickly: {prompt}"
+        },
+        {
+          "id": "w2",
+          "agentKey": "workhorse-ox",
+          "name": "Ox",
+          "taskTemplate": "Deep execute: {prompt}"
+        },
+        {
+          "id": "w3",
+          "agentKey": "workhorse-deepseek",
+          "name": "DeepSeek",
+          "taskTemplate": "Reason through: {prompt}"
         }
       ]
     }

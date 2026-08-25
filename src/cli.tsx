@@ -5,7 +5,7 @@ import { AgentManager } from './agent-manager.js';
 import { App } from './ui/App.js';
 import { loadpolycodeConfig, initConfig, readPackageVersion } from './config.js';
 import { optimizePrompt, substitutePlaceholders } from './prompt-copilot.js';
-import { route } from './router.js';
+import { route, smartDispatch } from './router.js';
 import type { PolycodeConfig, JobSpec } from './types.js';
 
 const HELP = `polycode — multi-agent parallel orchestrator & prompt-engineering copilot
@@ -201,17 +201,22 @@ function buildHeadlessJobs(
   const out: JobSpec[] = [];
   let sequential = false;
   if (mode === 'smart-auto') {
-    const r = route(prompt, config);
-    const agent = config.agents[r.agentKey];
-    if (agent) {
-      out.push({
-        id: r.agentKey,
-        agentKey: r.agentKey,
-        name: agent.name,
-        costBadge: agent.costBadge,
-        command: substitutePlaceholders(agent.cmdTemplate, { prompt }),
-      });
+    const plan = smartDispatch(prompt, config);
+    console.warn(`polycode: ${plan.overallReason}`);
+    for (const a of plan.agents) {
+      const agent = config.agents[a.agentKey];
+      if (agent) {
+        out.push({
+          id: `smart-${a.agentKey}`,
+          agentKey: a.agentKey,
+          name: agent.name,
+          costBadge: agent.costBadge,
+          command: substitutePlaceholders(agent.cmdTemplate, { prompt }),
+        });
+      }
     }
+    // If smartDispatch returned multiple agents, they run in parallel
+    // (sequential=false is the default, which means parallel via runParallel)
   } else if (mode.startsWith('manual:')) {
     const key = mode.slice('manual:'.length);
     const agent = config.agents[key];

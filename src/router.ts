@@ -1,4 +1,4 @@
-import type { PolycodeConfig, RouteResult } from './types.js';
+import type { PolycodeConfig, RouteResult, DispatchPlan } from './types.js';
 import { ConfigError } from './types.js';
 
 function wordCount(prompt: string): number {
@@ -75,5 +75,112 @@ export function route(prompt: string, config: PolycodeConfig): RouteResult {
     agentName: tier.name,
     confidence: 'high',
     reasons,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Smart dispatch — scores ALL agents, decides single vs parallel
+// ---------------------------------------------------------------------------
+
+interface AgentScore {
+  agentKey: string;
+  score: number;
+  matchedTags: string[];
+}
+
+function scoreAgent(prompt: string, agentKey: string, config: PolycodeConfig): AgentScore {
+  const agent = config.agents[agentKey];
+  if (!agent) return { agentKey, score: 0, matchedTags: [] };
+
+  const lower = prompt.toLowerCase();
+  const words = new Set(lower.split(/\s+/));
+  const matchedTags: string[] = [];
+  let score = 0;
+
+  // +3 per tag match (exact word or substring)
+  for (const tag of agent.tags) {
+    const t = tag.toLowerCase();
+    if (words.has(t) || lower.includes(t)) {
+      score += 3;
+      matchedTags.push(tag);
+    }
+  }
+
+  // +1 per description keyword that appears in prompt (up to 3)
+  const descWords = agent.description.toLowerCase().split(/\s+/);
+  const descHits = new Set<string>();
+  for (const dw of descWords) {
+    if (dw.length > 3 && (words.has(dw) || lower.includes(dw))) {
+      descHits.add(dw);
+    }
+    if (descHits.size >= 3) break;
+  }
+  score += descHits.size;
+
+  return { agentKey, score, matchedTags };
+}
+
+/**
+ * Intelligent multi-agent dispatch. Scores every agent in the config against
+ * the prompt using tags and description keywords. Returns a DispatchPlan:
+ * - Single agent if one clearly dominates (score > 2x second place)
+ * - Parallel agents if multiple score similarly (within 60% of top)
+ * - Falls back to tier-based route() if no agent tags match
+ */
+export function smartDispatch(prompt: string, config: PolycodeConfig): DispatchPlan {
+  const agentKeys = Object.keys(config.agents);
+  if (!agentKeys.length) {
+    throw new ConfigError('No agents defined in config.');
+  }
+
+  // Score every agent
+  const scores = agentKeys
+    .map((key) => scoreAgent(prompt, key, config))
+    .filter((s) => s.agentKey !== config.promptEngineer.agentKey) // exclude copilot
+    .sort((a, b) => b.score - a.score);
+
+  // No tags matched anything — fall back to tier-based routing
+  if (scores.length === 0 || scores[0].score === 0) {
+    const fallback = route(prompt, config);
+    return {
+      agents: [{ agentKey: fallback.agentKey, reason: `tier fallback: ${fallback.reasons.join(', ')}` }],
+      parallel: false,
+      overallReason: 'no agent tags matched; used tier routing',
+    };
+  }
+
+  const top = scores[0];
+  const second = scores[1];
+
+  // Clear winner: top score > 2x second place
+  if (!second || top.score > second.score * 2) {
+    return {
+      agents: [{ agentKey: top.agentKey, reason: `best match: tags [${top.matchedTags.join(', ')}]` }],
+      parallel: false,
+      overallReason: `single agent "${top.agentKey}" clearly best (score ${top.score})`,
+    };
+  }
+
+  // Multiple agents scored similarly — pick those within 60% of top
+  const threshold = top.score * 0.6;
+  const parallel = scores.filter((s) => s.score >= threshold && s.score > 0);
+
+  if (parallel.length === 1) {
+    return {
+      agents: [{ agentKey: parallel[0].agentKey, reason: `best match: tags [${parallel[0].matchedTags.join(', ')}]` }],
+      parallel: false,
+      overallReason: `single agent "${parallel[0].agentKey}" after filtering`,
+    };
+  }
+
+  // Cap at 4 parallel agents to avoid overload
+  const selected = parallel.slice(0, 4);
+  return {
+    agents: selected.map((s) => ({
+      agentKey: s.agentKey,
+      reason: `tags [${s.matchedTags.join(', ')}] score ${s.score}`,
+    })),
+    parallel: true,
+    overallReason: `${selected.length} agents scored similarly (top ${top.score}, threshold ${Math.round(threshold)})`,
   };
 }
